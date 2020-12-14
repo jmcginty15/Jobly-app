@@ -122,7 +122,7 @@ class User {
             [username]);
 
         if (result.rowCount === 0) {
-            throw new ExpressError(`Job ${username} not found`, 404);
+            throw new ExpressError(`User ${username} not found`, 404);
         } else {
             return 'User deleted';
         }

@@ -116,7 +116,7 @@ describe("GET /jobs/", function () {
 });
 
 describe("POST /jobs/", function () {
-    test("posts new company", async function () {
+    test("posts new job", async function () {
         const gofer = {
             title: 'Coffee Gofer',
             salary: 12,
@@ -138,7 +138,7 @@ describe("POST /jobs/", function () {
     });
 
     test("responds with error if sent data is missing or of incorrect type", async function () {
-        let gofer = {   // missing title
+        const gofer = {   // missing title
             salary: 12,
             equity: 0,
             companyHandle: 'black_rifle_coffee'
@@ -147,22 +147,14 @@ describe("POST /jobs/", function () {
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance requires property "title"');
 
-        gofer = {
-            title: 'Coffee Gofer',
-            salary: '12',   // salary formatted as string instead of number
-            equity: 0,
-            companyHandle: 'black_rifle_coffee'
-        };
+        gofer.title = 'Coffee Gofer';
+        gofer.salary = '12';    // salary formatted as string instead of number
         response = await request(app).post('/jobs/').send(gofer);
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.salary is not of a type(s) number');
 
-        gofer = {
-            title: 'Coffee Gofer',
-            salary: 12,
-            equity: 1.2,  // equity greater than 1
-            companyHandle: 'black_rifle_coffee'
-        };
+        gofer.salary = 12;
+        gofer.equity = 1.2; // equity greater than 1
         response = await request(app).post('/jobs/').send(gofer);
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.equity must be less than or equal to 1');
@@ -246,7 +238,7 @@ describe("PATCH /jobs/:id", function () {
         const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
         const jobId = result.rows[0].id;
 
-        let newInfo = {
+        const newInfo = {
             title: 'Coffee Gofer',
             salary: '12',   // salary formatted as string instead of number
             equity: 0,
@@ -256,18 +248,14 @@ describe("PATCH /jobs/:id", function () {
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.salary is not of a type(s) number');
 
-        newInfo = {
-            title: 'Coffee Gofer',
-            salary: 12,
-            equity: 1.2,    // equity greater than 1
-            companyHandle: 'austal_usa'
-        };
+        newInfo.salary = 12;
+        newInfo.equity = 1.2;   // equity greater than 1
         response = await request(app).patch(`/jobs/${jobId}`).send(newInfo);
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.equity must be less than or equal to 1');
     });
 
-    test("responds with 404 if company not found", async function () {
+    test("responds with 404 if job not found", async function () {
         const newInfo = {
             title: 'Coffee Gofer',
             salary: 12,
@@ -290,7 +278,7 @@ describe("DELETE /jobs/:id", function () {
         expect(response.body).toEqual({ message: 'Job deleted' });
     });
 
-    test("responds with 404 if company not found", async function () {
+    test("responds with 404 if job not found", async function () {
         const response = await request(app).delete('/jobs/99999');
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Job 99999 not found');

@@ -31,7 +31,7 @@ router.post('/', async (request, response, next) => {
         if (result.valid) {
             const { username, password, firstName, lastName, email, photoUrl } = request.body;
             const newUser = await User.register(username, password, firstName, lastName, email, photoUrl);
-            return response.json({ user: newUser });
+            return response.status(201).json({ user: newUser });
         } else {
             const listOfErrors = result.errors.map(error => error.stack);
             throw new ExpressError(listOfErrors, 400);

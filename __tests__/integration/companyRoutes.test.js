@@ -114,7 +114,7 @@ describe("POST /companies/", function () {
     });
 
     test("responds with error if sent data is missing or of incorrect type", async function () {
-        let pacl = { // missing handle
+        const pacl = { // missing handle
             name: 'Pro Am Chess League',
             numEmployees: 2,
             description: 'Chess club in Lenexa, KS',
@@ -124,13 +124,8 @@ describe("POST /companies/", function () {
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance requires property "handle"');
 
-        pacl = {
-            handle: 'pacl',
-            name: 'Pro Am Chess League',
-            numEmployees: '2',  // numEmployees formatted as string instead of int
-            description: 'Chess club in Lenexa, KS',
-            logoUrl: 'pacl.com'
-        };
+        pacl.handle = 'pacl';
+        pacl.numEmployees = '2';    // numEmployees formatted as string instead of int
         response = await request(app).post('/companies/').send(pacl);
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.numEmployees is not of a type(s) integer');
