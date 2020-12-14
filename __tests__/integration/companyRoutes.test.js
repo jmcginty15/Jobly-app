@@ -5,6 +5,17 @@ const request = require("supertest");
 const app = require("../../app");
 const db = require("../../db");
 
+beforeAll(async function () {
+    const ace = {
+        username: 'petdetective',
+        password: 'password',
+        firstName: 'Ace',
+        lastName: 'Ventura',
+        email: 'petdetective@gmail.com'
+    };
+    await request(app).post('/users/').send(ace);
+});
+
 beforeEach(async function () {
     await db.query(`DELETE FROM jobs`);
     await db.query(`DELETE FROM companies`);
@@ -22,7 +33,10 @@ beforeEach(async function () {
 
 describe("GET /companies/", function () {
     test("gets full list of companies", async function () {
-        const response = await request(app).get('/companies/');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/companies/').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             companies: [
@@ -43,7 +57,10 @@ describe("GET /companies/", function () {
     });
 
     test("searches by company name", async function () {
-        const response = await request(app).get('/companies/?name=bla');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/companies/?name=bla').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             companies: [
@@ -56,7 +73,10 @@ describe("GET /companies/", function () {
     });
 
     test("filters results by min and max employees", async function () {
-        let response = await request(app).get('/companies/?minEmployees=400');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        let response = await request(app).get('/companies/?minEmployees=400').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             companies: [
@@ -71,7 +91,7 @@ describe("GET /companies/", function () {
             ]
         });
 
-        response = await request(app).get('/companies/?maxEmployees=2000');
+        response = await request(app).get('/companies/?maxEmployees=2000').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             companies: [
@@ -86,7 +106,7 @@ describe("GET /companies/", function () {
             ]
         });
 
-        response = await request(app).get('/companies/?minEmployees=400&maxEmployees=2000');
+        response = await request(app).get('/companies/?minEmployees=400&maxEmployees=2000').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             companies: [
@@ -96,6 +116,12 @@ describe("GET /companies/", function () {
                 }
             ]
         });
+    });
+
+    test("responds with 401 if no jwt sent", async function () {
+        const response = await request(app).get('/companies/');
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 
@@ -134,7 +160,10 @@ describe("POST /companies/", function () {
 
 describe("GET /companies/:handle", function () {
     test("gets company by handle", async function () {
-        const response = await request(app).get('/companies/springboard');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/companies/springboard').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             company: {
@@ -166,9 +195,18 @@ describe("GET /companies/:handle", function () {
     });
 
     test("responds with 404 if company not found", async function () {
-        const response = await request(app).get('/companies/pacl');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/companies/pacl').send({ _token: token });
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Company pacl not found');
+    });
+
+    test("responds with 401 if no jwt sent", async function () {
+        const response = await request(app).get('/companies/springboard');
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 

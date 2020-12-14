@@ -6,12 +6,13 @@ const addCompanySchema = require("../schemas/company/addCompanySchema.json");
 const updateCompanySchema = require("../schemas/company/updateCompanySchema.json");
 
 const ExpressError = require("../helpers/expressError");
+const { ensureLoggedIn } = require("../middleware/auth");
 
 const router = new express.Router();
 
 /** GET / => { companies: [{ handle, name }, ... ]} */
 
-router.get('/', async (request, response, next) => {
+router.get('/', ensureLoggedIn, async (request, response, next) => {
     try {
         const { name, minEmployees, maxEmployees } = request.query;
         const companies = await Company.search(name, minEmployees, maxEmployees);
@@ -44,7 +45,7 @@ router.post('/', async (request, response, next) => {
 
 /** GET /:handle => { company: { handle, name, num_employees, description, logo_url } } */
 
-router.get('/:handle', async (request, response, next) => {
+router.get('/:handle', ensureLoggedIn, async (request, response, next) => {
     try {
         const company = await Company.get(request.params.handle);
         await company.getJobs();
