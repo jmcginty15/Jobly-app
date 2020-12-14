@@ -2,6 +2,8 @@ process.env.NODE_ENV = "test";
 
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const { BCRYPT_WORK_FACTOR } = require("../../config");
 
 const app = require("../../app");
 const db = require("../../db");
@@ -9,10 +11,10 @@ const db = require("../../db");
 beforeEach(async function () {
     await db.query(`DELETE FROM users`);
     await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url)
-        VALUES ('jmcginty15', 'password', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
-        ('zach_mcginty', 'yeet', 'Zach', 'McGinty', 'zach.mcginty@gmail.com', 'yeet.com'),
-        ('cowboy420', 'nice', 'Woody', 'Cowboy', 'theresasnakeinmyboot@gmail.com', 'snake.com'),
-        ('spaceranger69', 'nice', 'Buzz', 'Lightyear', 'totherescue@yahoo.com', 'buzz.com')`);
+        VALUES ('jmcginty15', '${await bcrypt.hash('password', BCRYPT_WORK_FACTOR)}', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
+        ('zach_mcginty', '${await bcrypt.hash('yeet', BCRYPT_WORK_FACTOR)}', 'Zach', 'McGinty', 'zach.mcginty@gmail.com', 'yeet.com'),
+        ('cowboy420', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Woody', 'Cowboy', 'theresasnakeinmyboot@gmail.com', 'snake.com'),
+        ('spaceranger69', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Buzz', 'Lightyear', 'totherescue@yahoo.com', 'buzz.com')`);
 });
 
 describe("GET /users/", function () {
@@ -118,7 +120,11 @@ describe("GET /users/:username", function () {
 
 describe("PATCH /users/:username", function () {
     test("updates a user by username", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'spaceranger69', password: 'nice' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             firstName: 'Tim',
             lastName: 'Allen',
             email: 'youareatoy@gmail.com',
@@ -138,7 +144,11 @@ describe("PATCH /users/:username", function () {
     });
 
     test("works with partial update", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'spaceranger69', password: 'nice' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             email: 'youareatoy@gmail.com',
             photoUrl: 'toy.story'
         };
@@ -156,7 +166,11 @@ describe("PATCH /users/:username", function () {
     });
 
     test("responds with error if data is of incorrect type", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'spaceranger69', password: 'nice' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             firstName: 'Tim',
             lastName: 'Allen',
             email: 'youareatoy',    // invalid email
@@ -167,30 +181,49 @@ describe("PATCH /users/:username", function () {
         expect(response.body.message[0]).toBe('instance.email does not conform to the "email" format');
     });
 
-    test("responds with 404 if user not found", async function () {
+    test("responds with 401 if jwt is for incorrect user or not sent", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'spaceranger69', password: 'nice' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             firstName: 'Tim',
             lastName: 'Allen',
             email: 'youareatoy@gmail.com',
             photoUrl: 'toy.story'
         };
-        const response = await request(app).patch('/users/imaginaryguy').send(newInfo);
-        expect(response.statusCode).toBe(404);
-        expect(response.body.message).toBe('User imaginaryguy not found');
+        let response = await request(app).patch('/users/jmcginty15').send(newInfo);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        delete newInfo._token;
+        response = await request(app).patch('/users/spaceranger69').send(newInfo);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 
 describe("DELETE /users/:username", function () {
     test("deletes a user by username", async function () {
-        const response = await request(app).delete(`/users/spaceranger69`);
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'spaceranger69', password: 'nice' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).delete(`/users/spaceranger69`).send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({ message: 'User deleted' });
     });
 
-    test("responds with 404 if user not found", async function () {
-        const response = await request(app).delete('/users/imaginaryguy');
-        expect(response.statusCode).toBe(404);
-        expect(response.body.message).toBe('User imaginaryguy not found');
+    test("responds with 401 if jwt is for incorrect user or not sent", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'spaceranger69', password: 'nice' });
+        const token = tokenResponse.body.token;
+
+        let response = await request(app).delete(`/users/jmcginty15`).send({ _token: token });
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        response = await request(app).delete(`/users/spaceranger69`);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 

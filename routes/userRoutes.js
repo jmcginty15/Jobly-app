@@ -8,6 +8,7 @@ const addUserSchema = require("../schemas/user/addUserSchema.json");
 const updateUserSchema = require("../schemas/user/updateUserSchema.json");
 
 const ExpressError = require("../helpers/expressError");
+const { ensureCorrectUser } = require("../middleware/auth");
 
 const router = new express.Router();
 
@@ -61,7 +62,7 @@ router.get('/:username', async (request, response, next) => {
  *      => { user: { username, first_name, last_name, email, photo_url } }
  */
 
-router.patch('/:username', async (request, response, next) => {
+router.patch('/:username', ensureCorrectUser, async (request, response, next) => {
     try {
         const result = jsonschema.validate(request.body, updateUserSchema);
 
@@ -80,7 +81,7 @@ router.patch('/:username', async (request, response, next) => {
 
 /** DELETE /:id => { message: 'User deleted' } */
 
-router.delete('/:username', async (request, response, next) => {
+router.delete('/:username', ensureCorrectUser, async (request, response, next) => {
     try {
         const message = await User.delete(request.params.username);
         return response.json({ message: message });
