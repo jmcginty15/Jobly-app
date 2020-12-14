@@ -4,6 +4,7 @@ const express = require("express");
 
 const companyRoutes = require("./routes/companyRoutes");
 const jobRoutes = require("./routes/jobRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const ExpressError = require("./helpers/expressError");
 
@@ -14,6 +15,7 @@ const app = express();
 app.use(express.json());
 app.use('/companies', companyRoutes);
 app.use('/jobs', jobRoutes);
+app.use('/users', userRoutes);
 
 // add logging system
 app.use(morgan("tiny"));

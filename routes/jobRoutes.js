@@ -55,7 +55,7 @@ router.get('/:id', async (request, response, next) => {
 
 /** PATCH /:id { title, salary, equity, companyHandle }
  *      => { job: { id, title, salary, equity, companyHandle, datePosted } }
-*/
+ */
 
 router.patch('/:id', async (request, response, next) => {
     try {
