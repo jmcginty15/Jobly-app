@@ -42,7 +42,7 @@ INSERT INTO jobs (title, salary, equity, company_handle, date_posted)
   ('Mechanical Engineer I', 90000, 0.1, 'austal_usa', '2018-03-27');
 
 INSERT INTO users (username, password, first_name, last_name, email, photo_url)
-  VALUES ('jmcginty15', 'butthole', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
+  VALUES ('jmcginty15', 'password', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
   ('zach_mcginty', 'yeet', 'Zach', 'McGinty', 'zach.mcginty@gmail.com', 'yeet.com'),
   ('cowboy420', 'nice', 'Woody', 'Cowboy', 'theresasnakeinmyboot@gmail.com', 'snake.com'),
   ('spaceranger69', 'nice', 'Buzz', 'Lightyear', 'totherescue@yahoo.com', 'buzz.com');
