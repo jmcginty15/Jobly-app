@@ -8,7 +8,7 @@ class Job {
 
     constructor({ id, title, salary, equity, company_handle, date_posted }) {
         this.id = id,
-            this.title = title;
+        this.title = title;
         this.salary = salary;
         this.equity = equity;
         this.companyHandle = company_handle;

@@ -32,7 +32,7 @@ router.post('/', async (request, response, next) => {
         if (result.valid) {
             const { title, salary, equity, companyHandle } = request.body;
             const newJob = await Job.create(title, salary, equity, companyHandle);
-            return response.status(201).json({ company: newJob });
+            return response.status(201).json({ job: newJob });
         } else {
             const listOfErrors = result.errors.map(error => error.stack);
             throw new ExpressError(listOfErrors, 400);

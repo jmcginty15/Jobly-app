@@ -1,6 +1,7 @@
 const db = require('../db');
 const ExpressError = require('../helpers/expressError');
 const sqlForPartialUpdate = require("../helpers/partialUpdate");
+const Job = require("./job");
 
 /** Company model */
 
@@ -121,6 +122,23 @@ class Company {
         } else {
             return 'Company deleted';
         }
+    }
+
+    /** get company's list of jobs:
+     * 
+     * => Company { handle, name, numEmployees, description, logoUrl, jobs: [ Job, ... ] }
+     * 
+     */
+
+    async getJobs() {
+        const result = await db.query(`SELECT * FROM jobs
+            WHERE company_handle = $1
+            ORDER BY date_posted DESC`,
+            [this.handle]);
+        
+        const jobs = result.rows.map(info => new Job(info));
+        this.jobs = jobs;
+        return this;
     }
 }
 

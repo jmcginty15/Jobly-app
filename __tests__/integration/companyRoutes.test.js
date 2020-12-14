@@ -4,14 +4,20 @@ const request = require("supertest");
 
 const app = require("../../app");
 const db = require("../../db");
-const Company = require("../../models/company");
 
 beforeEach(async function () {
+    await db.query(`DELETE FROM jobs`);
     await db.query(`DELETE FROM companies`);
     await db.query(`INSERT INTO companies (handle, name, num_employees, description, logo_url)
         VALUES ('springboard', 'Springboard', 5000, 'Software development bootcamp service', 'springboard.com'),
             ('black_rifle_coffee', 'Black Rifle Coffee', 300, 'Patriotic coffee company', 'blackriflecoffee.com'),
             ('austal_usa', 'Austal USA', 1000, 'US affiliate of an Australian shipbuilding company', 'austalusa.com')`);
+    await db.query(`INSERT INTO jobs (title, salary, equity, company_handle, date_posted)
+        VALUES ('Software Engineer', 80000, 0.25, 'springboard', '2017-06-06'),
+        ('Instructor', 100000, 0.3, 'springboard', '2020-01-09'),
+        ('Coffee Enthusiast', 150000, 0.75, 'black_rifle_coffee', '2019-12-15'),
+        ('Planner I', 61000, 0, 'austal_usa', '2020-11-20'),
+        ('Mechanical Engineer I', 90000, 0.1, 'austal_usa', '2018-03-27')`);
 });
 
 describe("GET /companies/", function () {
@@ -33,7 +39,7 @@ describe("GET /companies/", function () {
                     name: 'Springboard'
                 }
             ]
-        })
+        });
     });
 
     test("searches by company name", async function () {
@@ -46,7 +52,7 @@ describe("GET /companies/", function () {
                     name: 'Black Rifle Coffee'
                 }
             ]
-        })
+        });
     });
 
     test("filters results by min and max employees", async function () {
@@ -141,7 +147,25 @@ describe("GET /companies/:handle", function () {
                 name: 'Springboard',
                 numEmployees: 5000,
                 description: 'Software development bootcamp service',
-                logoUrl: 'springboard.com'
+                logoUrl: 'springboard.com',
+                jobs: [
+                    {
+                        id: expect.any(Number),
+                        title: 'Instructor',
+                        salary: 100000,
+                        equity: 0.3,
+                        companyHandle: 'springboard',
+                        datePosted: '2020-01-09T06:00:00.000Z'
+                    },
+                    {
+                        id: expect.any(Number),
+                        title: 'Software Engineer',
+                        salary: 80000,
+                        equity: 0.25,
+                        companyHandle: 'springboard',
+                        datePosted: '2017-06-06T05:00:00.000Z'
+                    }
+                ]
             }
         });
     });

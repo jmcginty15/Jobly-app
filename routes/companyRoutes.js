@@ -47,6 +47,7 @@ router.post('/', async (request, response, next) => {
 router.get('/:handle', async (request, response, next) => {
     try {
         const company = await Company.get(request.params.handle);
+        await company.getJobs();
         return response.json({ company: company });
     } catch (err) {
         return next(err);
