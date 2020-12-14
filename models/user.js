@@ -78,12 +78,12 @@ class User {
 
     /** get user by username:
      * 
-     * => User { username, first_name, last_name, email, photo_url }
+     * => User { username, first_name, last_name, email, photo_url, is_admin }
      * 
      */
 
     static async get(username) {
-        const result = await db.query(`SELECT username, first_name, last_name, email, photo_url FROM users
+        const result = await db.query(`SELECT username, first_name, last_name, email, photo_url, is_admin FROM users
             WHERE username = $1`,
             [username]);
 

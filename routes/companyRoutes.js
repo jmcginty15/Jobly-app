@@ -6,7 +6,7 @@ const addCompanySchema = require("../schemas/company/addCompanySchema.json");
 const updateCompanySchema = require("../schemas/company/updateCompanySchema.json");
 
 const ExpressError = require("../helpers/expressError");
-const { ensureLoggedIn } = require("../middleware/auth");
+const { ensureLoggedIn, ensureAdmin } = require("../middleware/auth");
 
 const router = new express.Router();
 
@@ -26,7 +26,7 @@ router.get('/', ensureLoggedIn, async (request, response, next) => {
  *      => { company: { handle, name, num_employees, description, logo_url } }
  */
 
-router.post('/', async (request, response, next) => {
+router.post('/', ensureAdmin, async (request, response, next) => {
     try {
         const result = jsonschema.validate(request.body, addCompanySchema);
 
@@ -59,7 +59,7 @@ router.get('/:handle', ensureLoggedIn, async (request, response, next) => {
  *      => { company: { handle, name, num_employees, description, logo_url } }
 */
 
-router.patch('/:handle', async (request, response, next) => {
+router.patch('/:handle', ensureAdmin, async (request, response, next) => {
     try {
         const result = jsonschema.validate(request.body, updateCompanySchema);
 
@@ -78,7 +78,7 @@ router.patch('/:handle', async (request, response, next) => {
 
 /** DELETE /:handle => { message: 'Company deleted' } */
 
-router.delete('/:handle', async (request, response, next) => {
+router.delete('/:handle', ensureAdmin, async (request, response, next) => {
     try {
         const message = await Company.delete(request.params.handle);
         return response.json({ message: message });

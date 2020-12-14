@@ -6,6 +6,7 @@ const app = require("../../app");
 const db = require("../../db");
 
 beforeAll(async function () {
+    await db.query(`DELETE FROM users`);
     const ace = {
         username: 'petdetective',
         password: 'password',
@@ -13,7 +14,16 @@ beforeAll(async function () {
         lastName: 'Ventura',
         email: 'petdetective@gmail.com'
     };
+    const aceAdmin = {
+        username: 'petdetectiveAdmin',
+        password: 'password',
+        firstName: 'Ace',
+        lastName: 'Ventura',
+        email: 'petdetectiveadmin@gmail.com',
+        isAdmin: true
+    };
     await request(app).post('/users/').send(ace);
+    await request(app).post('/users/').send(aceAdmin);
 });
 
 beforeEach(async function () {
@@ -127,7 +137,11 @@ describe("GET /companies/", function () {
 
 describe("POST /companies/", function () {
     test("posts new company", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const pacl = {
+            _token: token,
             handle: 'pacl',
             name: 'Pro Am Chess League',
             numEmployees: 2,
@@ -136,11 +150,16 @@ describe("POST /companies/", function () {
         };
         const response = await request(app).post('/companies/').send(pacl);
         expect(response.statusCode).toBe(201);
+        delete pacl._token;
         expect(response.body).toEqual({ company: pacl });
     });
 
     test("responds with error if sent data is missing or of incorrect type", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const pacl = { // missing handle
+            _token: token,
             name: 'Pro Am Chess League',
             numEmployees: 2,
             description: 'Chess club in Lenexa, KS',
@@ -155,6 +174,28 @@ describe("POST /companies/", function () {
         response = await request(app).post('/companies/').send(pacl);
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.numEmployees is not of a type(s) integer');
+    });
+
+    test("responds with 401 if jwt is not sent or does not belong to admin", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const pacl = {
+            _token: token,
+            handle: 'pacl',
+            name: 'Pro Am Chess League',
+            numEmployees: 2,
+            description: 'Chess club in Lenexa, KS',
+            logoUrl: 'pacl.com'
+        };
+        let response = await request(app).post('/companies/').send(pacl);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        delete pacl._token;
+        response = await request(app).post('/companies/').send(pacl);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 
@@ -212,7 +253,11 @@ describe("GET /companies/:handle", function () {
 
 describe("PATCH /companies/:handle", function () {
     test("updates a company by handle", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             name: 'Springboard Software Engineering',
             numEmployees: 4000,
             description: 'Software engineering bootcamp service',
@@ -232,7 +277,11 @@ describe("PATCH /companies/:handle", function () {
     });
 
     test("works with partial update", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             numEmployees: 4000,
             logoUrl: 'springboard.org'
         };
@@ -250,7 +299,11 @@ describe("PATCH /companies/:handle", function () {
     });
 
     test("responds with error if data is of incorrect type", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             numEmployees: '4000',   // numEmployees formatted as string instead of int
             logoUrl: 'springboard.org'
         };
@@ -260,7 +313,11 @@ describe("PATCH /companies/:handle", function () {
     });
 
     test("responds with 404 if company not found", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             name: 'Springboard Software Engineering',
             numEmployees: 4000,
             description: 'Software engineering bootcamp service',
@@ -270,19 +327,59 @@ describe("PATCH /companies/:handle", function () {
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Company pacl not found');
     });
+
+    test("responds with 401 if jwt is not sent or does not belong to admin", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const newInfo = {
+            _token: token,
+            name: 'Springboard Software Engineering',
+            numEmployees: 4000,
+            description: 'Software engineering bootcamp service',
+            logoUrl: 'springboard.org'
+        };
+        let response = await request(app).patch('/companies/springboard').send(newInfo);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        delete newInfo._token;
+        response = await request(app).patch('/companies/springboard').send(newInfo);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+    });
 });
 
 describe("DELETE /companies/:handle", function () {
     test("deletes a company by handle", async function () {
-        const response = await request(app).delete('/companies/springboard');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).delete('/companies/springboard').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({ message: 'Company deleted' });
     });
 
     test("responds with 404 if company not found", async function () {
-        const response = await request(app).delete('/companies/pacl');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).delete('/companies/pacl').send({ _token: token });
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Company pacl not found');
+    });
+
+    test("responds with 401 if jwt is not sent or does not belong to admin", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        let response = await request(app).delete('/companies/springboard').send({ _token: token });
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        response = await request(app).delete('/companies/springboard');
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 

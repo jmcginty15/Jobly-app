@@ -38,8 +38,26 @@ function ensureCorrectUser(request, response, next) {
     }
 }
 
+/** Middleware: Requires user is admin. */
+
+function ensureAdmin(request, response, next) {
+    if (request.user) {
+        const token = request.body._token;
+        const payload = jwt.verify(token, SECRET_KEY);
+
+        if (payload.isAdmin) {
+            return next();
+        } else {
+            return next({ status: 401, message: "Unauthorized" });
+        }
+    } else {
+        return next({ status: 401, message: "Unauthorized" });
+    }
+}
+
 module.exports = {
     authenticateJWT,
     ensureLoggedIn,
-    ensureCorrectUser
+    ensureCorrectUser,
+    ensureAdmin
 };

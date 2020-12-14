@@ -19,7 +19,8 @@ router.post('/login', async (request, response, next) => {
         const authenticated = await User.authenticate(username, password);
 
         if (authenticated) {
-            const payload = { username: username };
+            const user = await User.get(username);
+            const payload = { username: username, isAdmin: user.isAdmin };
             const token = jwt.sign(payload, SECRET_KEY);
             return response.json({ token: token });
         } else {

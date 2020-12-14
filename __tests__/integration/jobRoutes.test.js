@@ -6,6 +6,7 @@ const app = require("../../app");
 const db = require("../../db");
 
 beforeAll(async function () {
+    await db.query(`DELETE FROM users`);
     const ace = {
         username: 'petdetective',
         password: 'password',
@@ -13,7 +14,16 @@ beforeAll(async function () {
         lastName: 'Ventura',
         email: 'petdetective@gmail.com'
     };
+    const aceAdmin = {
+        username: 'petdetectiveAdmin',
+        password: 'password',
+        firstName: 'Ace',
+        lastName: 'Ventura',
+        email: 'petdetectiveadmin@gmail.com',
+        isAdmin: true
+    };
     await request(app).post('/users/').send(ace);
+    await request(app).post('/users/').send(aceAdmin);
 });
 
 beforeEach(async function () {
@@ -143,7 +153,11 @@ describe("GET /jobs/", function () {
 
 describe("POST /jobs/", function () {
     test("posts new job", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const gofer = {
+            _token: token,
             title: 'Coffee Gofer',
             salary: 12,
             equity: 0,
@@ -164,7 +178,11 @@ describe("POST /jobs/", function () {
     });
 
     test("responds with error if sent data is missing or of incorrect type", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const gofer = {   // missing title
+            _token: token,
             salary: 12,
             equity: 0,
             companyHandle: 'black_rifle_coffee'
@@ -184,6 +202,27 @@ describe("POST /jobs/", function () {
         response = await request(app).post('/jobs/').send(gofer);
         expect(response.statusCode).toBe(400);
         expect(response.body.message[0]).toBe('instance.equity must be less than or equal to 1');
+    });
+
+    test("responds with 401 if jwt is not sent or does not belong to admin", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const gofer = {
+            _token: token,
+            title: 'Coffee Gofer',
+            salary: 12,
+            equity: 0,
+            companyHandle: 'black_rifle_coffee'
+        };
+        let response = await request(app).post('/jobs/').send(gofer);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        delete gofer._token;
+        response = await request(app).post('/jobs/').send(gofer);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 
@@ -230,10 +269,14 @@ describe("GET /jobs/:id", function () {
 
 describe("PATCH /jobs/:id", function () {
     test("updates a job by id", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
         const jobId = result.rows[0].id;
 
         const newInfo = {
+            _token: token,
             title: 'Coffee Gofer',
             salary: 12,
             equity: 0,
@@ -254,10 +297,14 @@ describe("PATCH /jobs/:id", function () {
     });
 
     test("works with partial update", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
         const jobId = result.rows[0].id;
 
         const newInfo = {
+            _token: token,
             title: 'Coffee Gofer',
             equity: 0
         };
@@ -276,10 +323,14 @@ describe("PATCH /jobs/:id", function () {
     });
 
     test("responds with error if data is of incorrect type", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
         const jobId = result.rows[0].id;
 
         const newInfo = {
+            _token: token,
             title: 'Coffee Gofer',
             salary: '12',   // salary formatted as string instead of number
             equity: 0,
@@ -297,7 +348,11 @@ describe("PATCH /jobs/:id", function () {
     });
 
     test("responds with 404 if job not found", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const newInfo = {
+            _token: token,
             title: 'Coffee Gofer',
             salary: 12,
             equity: 0,
@@ -307,22 +362,68 @@ describe("PATCH /jobs/:id", function () {
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Job 99999 not found');
     });
+
+    test("responds with 401 if jwt is not sent or does not belong to admin", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = result.rows[0].id;
+
+        const newInfo = {
+            _token: token,
+            title: 'Coffee Gofer',
+            salary: 12,
+            equity: 0,
+            companyHandle: 'austal_usa'
+        };
+        let response = await request(app).patch(`/jobs/${jobId}`).send(newInfo);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        delete newInfo._token;
+        response = await request(app).patch(`/jobs/${jobId}`).send(newInfo);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+    });
 });
 
 describe("DELETE /jobs/:id", function () {
     test("deletes a job by id", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
         const jobId = result.rows[0].id;
 
-        const response = await request(app).delete(`/jobs/${jobId}`);
+        const response = await request(app).delete(`/jobs/${jobId}`).send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({ message: 'Job deleted' });
     });
 
     test("responds with 404 if job not found", async function () {
-        const response = await request(app).delete('/jobs/99999');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).delete('/jobs/99999').send({ _token: token });
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Job 99999 not found');
+    });
+
+    test("responds with 401 if jwt is not sent or does not belong to admin", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = result.rows[0].id;
+
+        let response = await request(app).delete(`/jobs/${jobId}`).send({ _token: token });
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        response = await request(app).delete(`/jobs/${jobId}`);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 
