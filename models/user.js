@@ -3,6 +3,7 @@ const ExpressError = require('../helpers/expressError');
 const sqlForPartialUpdate = require("../helpers/partialUpdate");
 const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require('../config');
+const { isatty } = require('tty');
 
 /** User model */
 

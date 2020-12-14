@@ -4,26 +4,27 @@ const request = require("supertest");
 
 const app = require("../../app");
 const db = require("../../db");
+const User = require("../../models/user");
 
 beforeAll(async function () {
     await db.query(`DELETE FROM users`);
-    const ace = {
-        username: 'petdetective',
-        password: 'password',
-        firstName: 'Ace',
-        lastName: 'Ventura',
-        email: 'petdetective@gmail.com'
-    };
-    const aceAdmin = {
-        username: 'petdetectiveAdmin',
-        password: 'password',
-        firstName: 'Ace',
-        lastName: 'Ventura',
-        email: 'petdetectiveadmin@gmail.com',
-        isAdmin: true
-    };
-    await request(app).post('/users/').send(ace);
-    await request(app).post('/users/').send(aceAdmin);
+
+    let username = 'petdetective';
+    let password = 'password';
+    let firstName = 'Ace';
+    let lastName = 'Ventura';
+    let email = 'petdetective@gmail.com';
+    let photoUrl = 'ace.com';
+    await User.register(username, password, firstName, lastName, email, photoUrl);
+
+    username = 'petdetectiveAdmin';
+    password = 'password';
+    firstName = 'Ace';
+    lastName = 'Ventura';
+    email = 'petdetectiveadmin@gmail.com';
+    photoUrl = 'aceAdmin.com';
+    const isAdmin = true;
+    await User.register(username, password, firstName, lastName, email, photoUrl, isAdmin);
 });
 
 beforeEach(async function () {
