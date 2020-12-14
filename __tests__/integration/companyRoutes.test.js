@@ -35,6 +35,62 @@ describe("GET /companies/", function () {
             ]
         })
     });
+
+    test("searches by company name", async function () {
+        const response = await request(app).get('/companies/?name=bla');
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toEqual({
+            companies: [
+                {
+                    handle: 'black_rifle_coffee',
+                    name: 'Black Rifle Coffee'
+                }
+            ]
+        })
+    });
+
+    test("filters results by min and max employees", async function () {
+        let response = await request(app).get('/companies/?minEmployees=400');
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toEqual({
+            companies: [
+                {
+                    handle: 'austal_usa',
+                    name: 'Austal USA'
+                },
+                {
+                    handle: 'springboard',
+                    name: 'Springboard'
+                }
+            ]
+        });
+
+        response = await request(app).get('/companies/?maxEmployees=2000');
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toEqual({
+            companies: [
+                {
+                    handle: 'austal_usa',
+                    name: 'Austal USA'
+                },
+                {
+                    handle: 'black_rifle_coffee',
+                    name: 'Black Rifle Coffee'
+                }
+            ]
+        });
+
+        response = await request(app).get('/companies/?minEmployees=400&maxEmployees=2000');
+        expect(response.statusCode).toBe(200);
+        expect(response.body).toEqual({
+            companies: [
+                {
+                    handle: 'austal_usa',
+                    name: 'Austal USA'
+                }
+            ]
+        });
+    });
 });
 
 describe("POST /companies/", function () {

@@ -13,8 +13,8 @@ const router = new express.Router();
 
 router.get('/', async (request, response, next) => {
     try {
-        const { name, min, max } = request.query;
-        const companies = await Company.search(name, min, max);
+        const { name, minEmployees, maxEmployees } = request.query;
+        const companies = await Company.search(name, minEmployees, maxEmployees);
         return response.json({ companies: companies });
     } catch (err) {
         return next(err);

@@ -14,7 +14,7 @@ class Company {
         this.logoUrl = logo_url;
     }
 
-    /** return array of company data:
+    /** return array of company handles and names:
      * 
      * => [{ handle, name }, ... ]
      * 
@@ -53,7 +53,7 @@ class Company {
     static async create(handle, name, numEmployees, description, logoUrl) {
         const result = await db.query(`INSERT INTO companies (handle, name, num_employees, description, logo_url)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING handle, name, num_employees, description, logo_url`,
+            RETURNING *`,
             [handle, name, numEmployees, description, logoUrl]);
         const newCompany = new Company(result.rows[0]);
         return newCompany;
