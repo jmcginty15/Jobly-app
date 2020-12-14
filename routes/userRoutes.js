@@ -1,5 +1,7 @@
 const express = require("express");
 const User = require("../models/user");
+const jwt = require('jsonwebtoken');
+const { SECRET_KEY } = require("../config");
 
 const jsonschema = require("jsonschema");
 const addUserSchema = require("../schemas/user/addUserSchema.json");
@@ -21,7 +23,7 @@ router.get('/', async (request, response, next) => {
 });
 
 /** POST / { username, password, first_name, last_name, email, photo_url }
- *      => { user: { username, first_name, last_name, email, photo_url } }
+ *      => { token: token }
  */
 
 router.post('/', async (request, response, next) => {
@@ -29,9 +31,11 @@ router.post('/', async (request, response, next) => {
         const result = jsonschema.validate(request.body, addUserSchema);
 
         if (result.valid) {
-            const { username, password, firstName, lastName, email, photoUrl } = request.body;
-            const newUser = await User.register(username, password, firstName, lastName, email, photoUrl);
-            return response.status(201).json({ user: newUser });
+            const { username, password, firstName, lastName, email, photoUrl, isAdmin } = request.body;
+            const newUser = await User.register(username, password, firstName, lastName, email, photoUrl, isAdmin);
+            const payload = { username: newUser.username, isAdmin: newUser.isAdmin };
+            const token = jwt.sign(payload, SECRET_KEY);
+            return response.status(201).json({ token: token });
         } else {
             const listOfErrors = result.errors.map(error => error.stack);
             throw new ExpressError(listOfErrors, 400);
@@ -46,6 +50,7 @@ router.post('/', async (request, response, next) => {
 router.get('/:username', async (request, response, next) => {
     try {
         const user = await User.get(request.params.username);
+        delete user.isAdmin;
         return response.json({ user: user });
     } catch (err) {
         return next(err);
@@ -62,6 +67,7 @@ router.patch('/:username', async (request, response, next) => {
 
         if (result.valid) {
             const updatedUser = await User.update(request.params.username, request.body);
+            delete updatedUser.isAdmin;
             return response.json({ user: updatedUser });
         } else {
             const listOfErrors = result.errors.map(error => error.stack);

@@ -1,6 +1,7 @@
 process.env.NODE_ENV = "test";
 
 const request = require("supertest");
+const jwt = require("jsonwebtoken");
 
 const app = require("../../app");
 const db = require("../../db");
@@ -50,7 +51,7 @@ describe("GET /users/", function () {
 });
 
 describe("POST /users/", function () {
-    test("posts new user", async function () {
+    test("posts new user and responds with jwt", async function () {
         const ace = {
             username: 'petdetective',
             password: 'password',
@@ -60,14 +61,11 @@ describe("POST /users/", function () {
         };
         const response = await request(app).post('/users/').send(ace);
         expect(response.statusCode).toBe(201);
-        expect(response.body).toEqual({
-            user: {
-                username: 'petdetective',
-                firstName: 'Ace',
-                lastName: 'Ventura',
-                email: 'petdetective@gmail.com',
-                photoUrl: null
-            }
+        const token = response.body.token;
+        expect(jwt.decode(token)).toEqual({
+            username: 'petdetective',
+            isAdmin: false,
+            iat: expect.any(Number)
         });
     });
 

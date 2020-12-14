@@ -5,6 +5,17 @@ const request = require("supertest");
 const app = require("../../app");
 const db = require("../../db");
 
+beforeAll(async function () {
+    const ace = {
+        username: 'petdetective',
+        password: 'password',
+        firstName: 'Ace',
+        lastName: 'Ventura',
+        email: 'petdetective@gmail.com'
+    };
+    await request(app).post('/users/').send(ace);
+});
+
 beforeEach(async function () {
     await db.query(`DELETE FROM jobs`);
     await db.query(`DELETE FROM companies`);
@@ -22,7 +33,10 @@ beforeEach(async function () {
 
 describe("GET /jobs/", function () {
     test("gets full list of jobs", async function () {
-        const response = await request(app).get('/jobs/');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/jobs/').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             jobs: [
@@ -51,7 +65,10 @@ describe("GET /jobs/", function () {
     });
 
     test("searches by job title", async function () {
-        const response = await request(app).get('/jobs/?title=eng');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/jobs/?title=eng').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             jobs: [
@@ -68,7 +85,10 @@ describe("GET /jobs/", function () {
     });
 
     test("filters results by min salary and equity", async function () {
-        let response = await request(app).get('/jobs/?minSalary=100000');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        let response = await request(app).get('/jobs/?minSalary=100000').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             jobs: [
@@ -83,7 +103,7 @@ describe("GET /jobs/", function () {
             ]
         });
 
-        response = await request(app).get('/jobs/?minEquity=0.25');
+        response = await request(app).get('/jobs/?minEquity=0.25').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             jobs: [
@@ -102,7 +122,7 @@ describe("GET /jobs/", function () {
             ]
         });
 
-        response = await request(app).get('/jobs/?minSalary=120000&minEquity=0.5');
+        response = await request(app).get('/jobs/?minSalary=120000&minEquity=0.5').send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             jobs: [
@@ -112,6 +132,12 @@ describe("GET /jobs/", function () {
                 }
             ]
         });
+    });
+
+    test("responds with 401 if no jwt sent", async function () {
+        const response = await request(app).get('/jobs/');
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 
@@ -163,10 +189,13 @@ describe("POST /jobs/", function () {
 
 describe("GET /jobs/:id", function () {
     test("gets job by id", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
         const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
         const jobId = result.rows[0].id;
 
-        const response = await request(app).get(`/jobs/${jobId}`);
+        const response = await request(app).get(`/jobs/${jobId}`).send({ _token: token });
         expect(response.statusCode).toBe(200);
         expect(response.body).toEqual({
             job: {
@@ -181,9 +210,21 @@ describe("GET /jobs/:id", function () {
     });
 
     test("responds with 404 if job not found", async function () {
-        const response = await request(app).get('/jobs/99999');
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const response = await request(app).get('/jobs/99999').send({ _token: token });
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe('Job 99999 not found');
+    });
+
+    test("responds with 401 if no jwt sent", async function () {
+        const result = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = result.rows[0].id;
+
+        const response = await request(app).get(`/jobs/${jobId}`);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
     });
 });
 

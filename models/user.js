@@ -8,12 +8,13 @@ const { BCRYPT_WORK_FACTOR } = require('../config');
 
 class User {
 
-    constructor({ username, first_name, last_name, email, photo_url }) {
+    constructor({ username, first_name, last_name, email, photo_url, is_admin }) {
         this.username = username;
         this.firstName = first_name;
         this.lastName = last_name;
         this.email = email;
         this.photoUrl = photo_url;
+        this.isAdmin = is_admin;
     }
 
     /** return array of user data:
@@ -32,12 +33,12 @@ class User {
 
     /** register new user:
      * 
-     * username, password, first_name, last_name, email, photo_url
-     *  => User { username, first_name, last_name, email, photo_url }
+     * username, password, first_name, last_name, email, photo_url, is_admin
+     *  => User { username, first_name, last_name, email, photo_url, is_admin }
      * 
      */
 
-    static async register(username, password, firstName, lastName, email, photoUrl) {
+    static async register(username, password, firstName, lastName, email, photoUrl, isAdmin = false) {
         const userResult = await db.query(`SELECT username FROM users
             WHERE username = $1`,
             [username]);
@@ -46,12 +47,32 @@ class User {
             throw new ExpressError(`Username ${username} already exists`, 400);
         } else {
             const hashedPassword = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
-            const result = await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url)
-                VALUES ($1, $2, $3, $4, $5, $6)
+            const result = await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url, is_admin)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING username, first_name, last_name, email, photo_url, is_admin`,
-                [username, hashedPassword, firstName, lastName, email, photoUrl]);
+                [username, hashedPassword, firstName, lastName, email, photoUrl, isAdmin]);
             const newUser = new User(result.rows[0]);
             return newUser;
+        }
+    }
+
+    /** authenticate user
+     * 
+     * username, password => authenticated
+     * 
+     */
+
+    static async authenticate(username, password) {
+        const result = await db.query(`SELECT password FROM users
+            WHERE username = $1`,
+            [username]);
+
+        if (result.rowCount === 0) {
+            throw new ExpressError(`User ${username} not found`, 404);
+        } else {
+            const hashedPassword = result.rows[0].password;
+            const authenticated = await bcrypt.compare(password, hashedPassword);
+            return authenticated;
         }
     }
 

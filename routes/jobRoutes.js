@@ -6,12 +6,13 @@ const addJobSchema = require("../schemas/job/addJobSchema.json");
 const updateJobSchema = require("../schemas/job/updateJobSchema.json");
 
 const ExpressError = require("../helpers/expressError");
+const { ensureLoggedIn } = require("../middleware/auth");
 
 const router = new express.Router();
 
 /** GET / => { jobs: [{ title, companyHandle }, ... ]} */
 
-router.get('/', async (request, response, next) => {
+router.get('/', ensureLoggedIn, async (request, response, next) => {
     try {
         const { title, minSalary, minEquity } = request.query;
         const jobs = await Job.search(title, minSalary, minEquity);
@@ -44,7 +45,7 @@ router.post('/', async (request, response, next) => {
 
 /** GET /:id => { job: { id, title, salary, equity, companyHandle, datePosted } } */
 
-router.get('/:id', async (request, response, next) => {
+router.get('/:id', ensureLoggedIn, async (request, response, next) => {
     try {
         const job = await Job.get(request.params.id);
         return response.json({ job: job });
