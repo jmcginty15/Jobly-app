@@ -109,4 +109,16 @@ router.post('/:id/apply', ensureLoggedIn, async (request, response, next) => {
     }
 });
 
+/** POST /:id/respond { username, state } => { message: 'accepted'/'rejected' } */
+
+router.post('/:id/respond', ensureAdmin, async (request, response, next) => {
+    try {
+        const application = await Application.get(request.body.username, request.params.id);
+        await application.update(request.body.state);
+        return response.status(201).json({ message: request.body.state });
+    } catch (err) {
+        return next(err);
+    }
+});
+
 module.exports = router;

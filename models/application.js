@@ -1,7 +1,6 @@
 const { user } = require('../db');
 const db = require('../db');
 const ExpressError = require('../helpers/expressError');
-const sqlForPartialUpdate = require("../helpers/partialUpdate");
 
 /** Application model */
 
@@ -28,7 +27,7 @@ class Application {
         if (result.rowCount === 0) {
             throw new ExpressError(`Application not found`, 404);
         } else {
-            const user = new User(result.rows[0]);
+            const user = new Application(result.rows[0]);
             return user;
         }
     }
@@ -81,6 +80,8 @@ class Application {
                 WHERE username = $2 AND job_id = $3
                 RETURNING *`,
                 [newState, this.username, this.jobId]);
+            this.state = newState;
+            return this;
         } else {
             throw new ExpressError('Invalid application state', 400);
         }

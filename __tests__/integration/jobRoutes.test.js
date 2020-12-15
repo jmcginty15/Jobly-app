@@ -513,6 +513,61 @@ describe("POST /jobs/:id/apply", function () {
     });
 });
 
+describe("POST /jobs/:id/respond", function () {
+    test("changes state of existing application to 'accepted' or 'rejected'", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetectiveAdmin', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        await Application.create('petdetective', jobId, 'applied');
+
+        let response = await request(app).post(`/jobs/${jobId}/respond`).send({
+            _token: token,
+            username: 'petdetective',
+            state: 'accepted'
+        });
+        expect(response.statusCode).toBe(201);
+        expect(response.body.message).toBe('accepted');
+
+        await Application.create('spaceranger69', jobId, 'applied');
+
+        response = await request(app).post(`/jobs/${jobId}/respond`).send({
+            _token: token,
+            username: 'spaceranger69',
+            state: 'rejected'
+        });
+        expect(response.statusCode).toBe(201);
+        expect(response.body.message).toBe('rejected');
+    });
+
+    test("responds with 401 is jwt is not sent or does not belong to admin", async function () {
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        await Application.create('petdetective', jobId, 'applied');
+
+        let response = await request(app).post(`/jobs/${jobId}/respond`).send({
+            username: 'petdetective',
+            state: 'accepted'
+        });
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        response = await request(app).post(`/jobs/${jobId}/respond`).send({
+            _token: token,
+            username: 'petdetective',
+            state: 'accepted'
+        });
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+    });
+});
+
 afterAll(async function () {
     await db.end();
 });
