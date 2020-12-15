@@ -49,6 +49,7 @@ router.post('/', ensureAdmin, async (request, response, next) => {
 router.get('/:id', ensureLoggedIn, async (request, response, next) => {
     try {
         const job = await Job.get(request.params.id);
+        await job.getTechnologies();
         return response.json({ job: job });
     } catch (err) {
         return next(err);

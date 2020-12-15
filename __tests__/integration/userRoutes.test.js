@@ -12,6 +12,8 @@ const Job = require("../../models/job");
 beforeEach(async function () {
     await db.query(`DELETE FROM users`);
     await db.query(`DELETE FROM jobs`);
+    await db.query(`DELETE FROM technologies`);
+    await db.query(`DELETE FROM user_technologies`);
     await db.query(`DELETE FROM applications`);
 
     await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url)
@@ -44,6 +46,21 @@ beforeEach(async function () {
     await db.query(`INSERT INTO applications (username, job_id, state)
         VALUES ($1, $2, $3)`,
         ['spaceranger69', job.id, 'rejected']);
+
+    const techResult = await db.query(`INSERT INTO technologies (name)
+        VALUES ('Python'), ('JavaScript'), ('Microsoft Excel'), ('Brewing'), ('Rifles'), ('AutoCAD')
+        RETURNING id`);
+    const techIds = techResult.rows;
+
+    await db.query(`INSERT INTO user_technologies (username, technology_id)
+        VALUES ('jmcginty15', ${techIds[0].id}),
+        ('jmcginty15', ${techIds[1].id}),
+        ('jmcginty15', ${techIds[2].id}),
+        ('jmcginty15', ${techIds[3].id}),
+        ('zach_mcginty', ${techIds[2].id}),
+        ('zach_mcginty', ${techIds[3].id}),
+        ('cowboy420', ${techIds[3].id}),
+        ('spaceranger69', ${techIds[5].id})`);
 });
 
 describe("GET /users/", function () {
@@ -145,6 +162,9 @@ describe("GET /users/:username", function () {
                         jobId: expect.any(Number),
                         state: 'rejected'
                     }
+                ],
+                technologies: [
+                    { name: 'AutoCAD' }
                 ]
             }
         });

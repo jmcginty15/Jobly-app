@@ -33,24 +33,44 @@ beforeAll(async function () {
 beforeEach(async function () {
     await db.query(`DELETE FROM users WHERE username <> 'petdetective' AND username <> 'petdetectiveAdmin'`);
     await db.query(`DELETE FROM jobs`);
+    await db.query(`DELETE FROM technologies`);
+    await db.query(`DELETE FROM job_technologies`);
     await db.query(`DELETE FROM companies`);
     await db.query(`DELETE FROM applications`);
     await db.query(`INSERT INTO companies (handle, name, num_employees, description, logo_url)
         VALUES ('springboard', 'Springboard', 5000, 'Software development bootcamp service', 'springboard.com'),
             ('black_rifle_coffee', 'Black Rifle Coffee', 300, 'Patriotic coffee company', 'blackriflecoffee.com'),
             ('austal_usa', 'Austal USA', 1000, 'US affiliate of an Australian shipbuilding company', 'austalusa.com')`);
-    await db.query(`INSERT INTO jobs (title, salary, equity, company_handle, date_posted)
+    
+    const jobResult = await db.query(`INSERT INTO jobs (title, salary, equity, company_handle, date_posted)
         VALUES ('Software Engineer', 80000, 0.25, 'springboard', '2017-06-06'),
         ('Instructor', 100000, 0.3, 'springboard', '2020-01-09'),
         ('Coffee Enthusiast', 150000, 0.75, 'black_rifle_coffee', '2019-12-15'),
         ('Planner I', 61000, 0, 'austal_usa', '2020-11-20'),
-        ('Mechanical Engineer I', 90000, 0.1, 'austal_usa', '2018-03-27')`);
+        ('Mechanical Engineer I', 90000, 0.1, 'austal_usa', '2018-03-27')
+        RETURNING id`);
+    const jobIds = jobResult.rows;
 
     await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url)
         VALUES ('jmcginty15', '${await bcrypt.hash('password', BCRYPT_WORK_FACTOR)}', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
         ('zach_mcginty', '${await bcrypt.hash('yeet', BCRYPT_WORK_FACTOR)}', 'Zach', 'McGinty', 'zach.mcginty@gmail.com', 'yeet.com'),
         ('cowboy420', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Woody', 'Cowboy', 'theresasnakeinmyboot@gmail.com', 'snake.com'),
         ('spaceranger69', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Buzz', 'Lightyear', 'totherescue@yahoo.com', 'buzz.com')`);
+
+    const techResult = await db.query(`INSERT INTO technologies (name)
+        VALUES ('Python'), ('JavaScript'), ('Microsoft Excel'), ('Brewing'), ('Rifles'), ('AutoCAD')
+        RETURNING id`);
+    const techIds = techResult.rows;
+
+    await db.query(`INSERT INTO job_technologies (job_id, technology_id)
+        VALUES (${jobIds[0].id}, ${techIds[0].id}),
+        (${jobIds[0].id}, ${techIds[1].id}),
+        (${jobIds[1].id}, ${techIds[0].id}),
+        (${jobIds[1].id}, ${techIds[1].id}),
+        (${jobIds[2].id}, ${techIds[3].id}),
+        (${jobIds[2].id}, ${techIds[4].id}),
+        (${jobIds[3].id}, ${techIds[2].id}),
+        (${jobIds[4].id}, ${techIds[5].id})`);
 });
 
 describe("GET /jobs/", function () {
@@ -255,7 +275,11 @@ describe("GET /jobs/:id", function () {
                 salary: 150000,
                 equity: 0.75,
                 companyHandle: 'black_rifle_coffee',
-                datePosted: '2019-12-15T06:00:00.000Z'
+                datePosted: '2019-12-15T06:00:00.000Z',
+                technologies: [
+                    { name: 'Brewing' },
+                    { name: 'Rifles' }
+                ]
             }
         });
     });

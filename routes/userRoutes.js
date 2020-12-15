@@ -53,6 +53,7 @@ router.get('/:username', async (request, response, next) => {
         const user = await User.get(request.params.username);
         delete user.isAdmin;
         await user.getApplications();
+        await user.getTechnologies();
         return response.json({ user: user });
     } catch (err) {
         return next(err);

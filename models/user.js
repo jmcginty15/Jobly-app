@@ -172,6 +172,26 @@ class User {
         return this;
     }
 
+    /** get user's list of technologies:
+     * 
+     * => User { username, first_name, last_name, email, photo_url, technologies: [ { name }, ... ] }
+     * 
+     */
+
+    async getTechnologies() {
+        const result = await db.query(`SELECT name FROM technologies
+            WHERE id IN (
+                SELECT technology_id FROM user_technologies
+                WHERE username = $1
+            )
+            ORDER BY name`,
+            [this.username]);
+        
+        const technologies = result.rows;
+        this.technologies = technologies;
+        return this;
+    }
+
 }
 
 module.exports = User;

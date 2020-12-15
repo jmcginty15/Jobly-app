@@ -117,6 +117,27 @@ class Job {
             return 'Job deleted';
         }
     }
+
+    /** get job's list of technologies:
+     * 
+     * => Job { id, title, salary, equity, companyHandle, datePosted, technologies: [ { name }, ... ] }
+     * 
+     */
+
+    async getTechnologies() {
+        const result = await db.query(`SELECT name FROM technologies
+            WHERE id IN (
+                SELECT technology_id FROM job_technologies
+                WHERE job_id = $1
+            )
+            ORDER BY name`,
+            [this.id]);
+        
+        const technologies = result.rows;
+        this.technologies = technologies;
+        return this;
+    }
+
 }
 
 module.exports = Job;
