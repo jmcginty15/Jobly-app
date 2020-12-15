@@ -1,5 +1,6 @@
 const express = require("express");
 const Job = require("../models/job");
+const Application = require("../models/application");
 
 const jsonschema = require("jsonschema");
 const addJobSchema = require("../schemas/job/addJobSchema.json");
@@ -81,6 +82,28 @@ router.delete('/:id', ensureAdmin, async (request, response, next) => {
     try {
         const message = await Job.delete(request.params.id);
         return response.json({ message: message });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** POST /:id/interested { _token: token } => { message: 'interested' } */
+
+router.post('/:id/interested', ensureLoggedIn, async (request, response, next) => {
+    try {
+        await Application.create(request.user.username, request.params.id, 'interested');
+        return response.status(201).json({ message: 'interested' });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** POST /:id/apply { _token: token } => { message: 'applied' } */
+
+router.post('/:id/apply', ensureLoggedIn, async (request, response, next) => {
+    try {
+        await Application.create(request.user.username, request.params.id, 'applied');
+        return response.status(201).json({ message: 'applied' });
     } catch (err) {
         return next(err);
     }

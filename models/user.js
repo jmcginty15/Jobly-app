@@ -3,7 +3,7 @@ const ExpressError = require('../helpers/expressError');
 const sqlForPartialUpdate = require("../helpers/partialUpdate");
 const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require('../config');
-const { isatty } = require('tty');
+const Application = require("./application");
 
 /** User model */
 
@@ -148,6 +148,28 @@ class User {
         } else {
             return 'User deleted';
         }
+    }
+
+    /** get user's list of applications:
+     * 
+     * => User { username, first_name, last_name, email, photo_url, applications: [ Application, ... ] }
+     * 
+     */
+
+    async getApplications() {
+        const result = await db.query(`SELECT * FROM applications
+            WHERE username = $1
+            ORDER BY job_id`,
+            [this.username]);
+        
+        const applications = result.rows.map(info => {
+            const app = new Application(info);
+            delete app.username;
+            delete app.createdAt;
+            return app;
+        });
+        this.applications = applications;
+        return this;
     }
 
 }

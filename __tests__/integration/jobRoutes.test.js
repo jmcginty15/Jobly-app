@@ -1,10 +1,13 @@
 process.env.NODE_ENV = "test";
 
 const request = require("supertest");
+const bcrypt = require("bcrypt");
+const { BCRYPT_WORK_FACTOR } = require("../../config");
 
 const app = require("../../app");
 const db = require("../../db");
 const User = require("../../models/user");
+const Application = require("../../models/application");
 
 beforeAll(async function () {
     await db.query(`DELETE FROM users`);
@@ -28,8 +31,10 @@ beforeAll(async function () {
 });
 
 beforeEach(async function () {
+    await db.query(`DELETE FROM users WHERE username <> 'petdetective' AND username <> 'petdetectiveAdmin'`);
     await db.query(`DELETE FROM jobs`);
     await db.query(`DELETE FROM companies`);
+    await db.query(`DELETE FROM applications`);
     await db.query(`INSERT INTO companies (handle, name, num_employees, description, logo_url)
         VALUES ('springboard', 'Springboard', 5000, 'Software development bootcamp service', 'springboard.com'),
             ('black_rifle_coffee', 'Black Rifle Coffee', 300, 'Patriotic coffee company', 'blackriflecoffee.com'),
@@ -40,6 +45,12 @@ beforeEach(async function () {
         ('Coffee Enthusiast', 150000, 0.75, 'black_rifle_coffee', '2019-12-15'),
         ('Planner I', 61000, 0, 'austal_usa', '2020-11-20'),
         ('Mechanical Engineer I', 90000, 0.1, 'austal_usa', '2018-03-27')`);
+
+    await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url)
+        VALUES ('jmcginty15', '${await bcrypt.hash('password', BCRYPT_WORK_FACTOR)}', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
+        ('zach_mcginty', '${await bcrypt.hash('yeet', BCRYPT_WORK_FACTOR)}', 'Zach', 'McGinty', 'zach.mcginty@gmail.com', 'yeet.com'),
+        ('cowboy420', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Woody', 'Cowboy', 'theresasnakeinmyboot@gmail.com', 'snake.com'),
+        ('spaceranger69', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Buzz', 'Lightyear', 'totherescue@yahoo.com', 'buzz.com')`);
 });
 
 describe("GET /jobs/", function () {
@@ -423,6 +434,80 @@ describe("DELETE /jobs/:id", function () {
         expect(response.body.message).toBe('Unauthorized');
 
         response = await request(app).delete(`/jobs/${jobId}`);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+    });
+});
+
+describe("POST /jobs/:id/interested", function () {
+    test("creates new application with state 'interested' and responds with message", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        const response = await request(app).post(`/jobs/${jobId}/interested`).send({ _token: token });
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toEqual({ message: 'interested' });
+    });
+
+    test("changes state of existing application to 'interested' and responds with message", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        await Application.create('petdetective', jobId, 'applied');
+
+        const response = await request(app).post(`/jobs/${jobId}/interested`).send({ _token: token });
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toEqual({ message: 'interested' });
+    });
+
+    test("responds with 401 if jwt is not sent", async function () {
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        const response = await request(app).post(`/jobs/${jobId}/interested`);
+        expect(response.statusCode).toBe(401);
+        expect(response.body.message).toBe('Unauthorized');
+    });
+});
+
+describe("POST /jobs/:id/apply", function () {
+    test("creates new application with state 'applied' and responds with message", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        const response = await request(app).post(`/jobs/${jobId}/apply`).send({ _token: token });
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toEqual({ message: 'applied' });
+    });
+
+    test("changes state of existing application to 'applied' and responds with message", async function () {
+        const tokenResponse = await request(app).post('/auth/login').send({ username: 'petdetective', password: 'password' });
+        const token = tokenResponse.body.token;
+
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        await Application.create('petdetective', jobId, 'interested');
+
+        const response = await request(app).post(`/jobs/${jobId}/apply`).send({ _token: token });
+        expect(response.statusCode).toBe(201);
+        expect(response.body).toEqual({ message: 'applied' });
+    });
+
+    test("responds with 401 if jwt is not sent", async function () {
+        const jobResult = await db.query(`SELECT id FROM jobs WHERE title = $1`, ['Coffee Enthusiast']);
+        const jobId = jobResult.rows[0].id;
+
+        const response = await request(app).post(`/jobs/${jobId}/apply`);
         expect(response.statusCode).toBe(401);
         expect(response.body.message).toBe('Unauthorized');
     });

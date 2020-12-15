@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS applications;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS jobs;
 DROP TABLE IF EXISTS companies;
@@ -27,6 +28,13 @@ CREATE TABLE users (
   email text UNIQUE NOT NULL,
   photo_url text,
   is_admin boolean NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE applications (
+  username text REFERENCES users ON DELETE CASCADE,
+  job_id integer REFERENCES jobs ON DELETE CASCADE,
+  state text DEFAULT 'interested' NOT NULL,
+  created_at date DEFAULT CURRENT_DATE NOT NULL
 );
 
 INSERT INTO companies (handle, name, num_employees, description, logo_url)

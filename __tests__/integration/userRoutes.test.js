@@ -7,14 +7,43 @@ const { BCRYPT_WORK_FACTOR } = require("../../config");
 
 const app = require("../../app");
 const db = require("../../db");
+const Job = require("../../models/job");
 
 beforeEach(async function () {
     await db.query(`DELETE FROM users`);
+    await db.query(`DELETE FROM jobs`);
+    await db.query(`DELETE FROM applications`);
+
     await db.query(`INSERT INTO users (username, password, first_name, last_name, email, photo_url)
         VALUES ('jmcginty15', '${await bcrypt.hash('password', BCRYPT_WORK_FACTOR)}', 'Jason', 'McGinty', 'jason_mcginty@yahoo.com', 'something.org'),
         ('zach_mcginty', '${await bcrypt.hash('yeet', BCRYPT_WORK_FACTOR)}', 'Zach', 'McGinty', 'zach.mcginty@gmail.com', 'yeet.com'),
         ('cowboy420', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Woody', 'Cowboy', 'theresasnakeinmyboot@gmail.com', 'snake.com'),
         ('spaceranger69', '${await bcrypt.hash('nice', BCRYPT_WORK_FACTOR)}', 'Buzz', 'Lightyear', 'totherescue@yahoo.com', 'buzz.com')`);
+
+    let job = await Job.create('Software Engineer', 80000, 0.25, 'springboard');
+    await db.query(`INSERT INTO applications (username, job_id, state)
+        VALUES ($1, $2, $3)`,
+        ['jmcginty15', job.id, 'applied']);
+
+    job = await Job.create('Instructor', 100000, 0.3, 'springboard');
+    await db.query(`INSERT INTO applications (username, job_id, state)
+        VALUES ($1, $2, $3)`,
+        ['cowboy420', job.id, 'interested']);
+
+    job = await Job.create('Coffee Enthusiast', 150000, 0.75, 'black_rifle_coffee');
+    await db.query(`INSERT INTO applications (username, job_id, state)
+        VALUES ($1, $2, $3)`,
+        ['spaceranger69', job.id, 'applied']);
+
+    job = await Job.create('Planner I', 61000, 0, 'austal_usa');
+    await db.query(`INSERT INTO applications (username, job_id, state)
+        VALUES ($1, $2, $3)`,
+        ['cowboy420', job.id, 'accepted']);
+
+    job = await Job.create('Mechanical Engineer I', 90000, 0.1, 'austal_usa');
+    await db.query(`INSERT INTO applications (username, job_id, state)
+        VALUES ($1, $2, $3)`,
+        ['spaceranger69', job.id, 'rejected']);
 });
 
 describe("GET /users/", function () {
@@ -106,7 +135,17 @@ describe("GET /users/:username", function () {
                 firstName: 'Buzz',
                 lastName: 'Lightyear',
                 email: 'totherescue@yahoo.com',
-                photoUrl: 'buzz.com'
+                photoUrl: 'buzz.com',
+                applications: [
+                    {
+                        jobId: expect.any(Number),
+                        state: 'applied'
+                    },
+                    {
+                        jobId: expect.any(Number),
+                        state: 'rejected'
+                    }
+                ]
             }
         });
     });
