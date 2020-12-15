@@ -41,6 +41,32 @@ class Job {
         return result.rows;
     }
 
+    /** return array of job titles and company handles that match an array of technologies:
+     * 
+     * => [{ title, companyHandle }, ... ]
+     * 
+     */
+
+    static async searchByTechnology(technologies) {
+        const result = await db.query(`SELECT * FROM jobs
+            ORDER BY date_posted DESC`);
+        const allJobs = result.rows.map(job => new Job(job));
+
+        const jobMatches = [];
+        for (let job of allJobs) {
+            await job.getTechnologies();
+            const jobTechnologies = job.technologies.map(tech => tech.name);
+            const userTechnologies = technologies.map(tech => tech.name);
+            const intersection = jobTechnologies.filter(tech => userTechnologies.includes(tech));
+
+            if (intersection.length > 0) {
+                jobMatches.push({ title: job.title, companyHandle: job.companyHandle });
+            }
+        }
+
+        return jobMatches;
+    }
+
     /** create new job:
      * 
      * title, salary, equity, companyHandle
@@ -132,7 +158,7 @@ class Job {
             )
             ORDER BY name`,
             [this.id]);
-        
+
         const technologies = result.rows;
         this.technologies = technologies;
         return this;

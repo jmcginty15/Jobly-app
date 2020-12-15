@@ -1,5 +1,6 @@
 const express = require("express");
 const User = require("../models/user");
+const Job = require("../models/job");
 const jwt = require('jsonwebtoken');
 const { SECRET_KEY } = require("../config");
 
@@ -87,6 +88,21 @@ router.delete('/:username', ensureCorrectUser, async (request, response, next) =
     try {
         const message = await User.delete(request.params.username);
         return response.json({ message: message });
+    } catch (err) {
+        return next(err);
+    }
+});
+
+/** GET /:username/find_jobs
+ *  => { technologies: [ { name }, ... ], jobs: [ { title, companyHandle }, ... ] }
+ * */
+
+router.get('/:username/find_jobs', ensureCorrectUser, async (request, response, next) => {
+    try {
+        const user = await User.get(request.params.username);
+        await user.getTechnologies();
+        const jobs = await Job.searchByTechnology(user.technologies);
+        return response.json({ technologies: user.technologies, jobs: jobs });
     } catch (err) {
         return next(err);
     }
